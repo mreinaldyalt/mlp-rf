@@ -25,9 +25,8 @@ app = FastAPI()
 origins = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
-    # nanti tambahkan GitHub Pages:
-    # "https://mreinaldyalt.github.io",
-    # "https://mreinaldyalt.github.io/mlp-rf",
+    "https://mreinaldyalt.github.io",
+    "https://mreinaldyalt.github.io/mlp-rf"
 ]
 
 app.add_middleware(
