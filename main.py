@@ -15,8 +15,11 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
 # ================================================================
-#  CORS FIX SESUAI ARAHAN GPT
+#  KONFIG: BATAS MAKSIMUM BARIS & CORS
 # ================================================================
+MAX_ROWS = 200_000          # maks baris yang dibaca dari CSV (untuk Render)
+SAMPLE_FRAC = 0.02          # 2% sampling untuk training (lebih ringan)
+
 app = FastAPI()
 
 origins = [
@@ -24,7 +27,7 @@ origins = [
     "http://localhost:5500",
     # nanti tambahkan GitHub Pages:
     # "https://mreinaldyalt.github.io",
-    # "https://mreinaldyalt.github.io/as",
+    # "https://mreinaldyalt.github.io/mlp-rf",
 ]
 
 app.add_middleware(
@@ -56,12 +59,17 @@ async def run_mlp(file: UploadFile = File(...)):
     print("\n=== REQUEST MLP DITERIMA ===")
 
     try:
-        # 1. Baca CSV
+        # 1. Baca CSV (dibatasi MAX_ROWS)
         content = await file.read()
         print("Ukuran file diterima (MLP):", len(content))
 
-        df = pd.read_csv(io.BytesIO(content), sep=None, engine="python")
-        print("CSV terbaca (MLP). Shape asli:", df.shape)
+        df = pd.read_csv(
+            io.BytesIO(content),
+            sep=None,
+            engine="python",
+            nrows=MAX_ROWS,      # <-- BATASIN BARIS DI SINI
+        )
+        print("CSV terbaca (MLP). Shape asli (dibatasi):", df.shape)
 
         # 2. Ambil kolom numerik
         numeric = df.select_dtypes(include="number")
@@ -89,9 +97,11 @@ async def run_mlp(file: UploadFile = File(...)):
                 status_code=400,
             )
 
-        # 5. Sampling 5%
-        SAMPLE_FRAC = 0.05
-        df_sampled = pd.concat([X, y], axis=1).sample(frac=SAMPLE_FRAC, random_state=42)
+        # 5. Sampling 2% (lebih ringan)
+        df_sampled = pd.concat([X, y], axis=1).sample(
+            frac=SAMPLE_FRAC,
+            random_state=42,
+        )
         print(f"Sampling {SAMPLE_FRAC*100}% data (MLP) →", df_sampled.shape)
 
         # 6. Pisahkan lagi
@@ -176,7 +186,8 @@ async def run_mlp(file: UploadFile = File(...)):
 
         summary = (
             f"Model MLP dengan hidden layer {model.hidden_layer_sizes}, max_iter={model.max_iter}, "
-            f"menggunakan {len(X_train)} data train dan {len(X_test)} data test."
+            f"menggunakan {len(X_train)} data train dan {len(X_test)} data test "
+            f"dari maksimum {MAX_ROWS} baris pertama dataset."
         )
 
         conclusion = (
@@ -218,9 +229,14 @@ async def run_rf(file: UploadFile = File(...)):
     print("\n=== REQUEST RANDOM FOREST DITERIMA ===")
 
     try:
-        # 1. Baca CSV
+        # 1. Baca CSV (dibatasi MAX_ROWS)
         content = await file.read()
-        df = pd.read_csv(io.BytesIO(content), sep=None, engine="python")
+        df = pd.read_csv(
+            io.BytesIO(content),
+            sep=None,
+            engine="python",
+            nrows=MAX_ROWS,      # <-- BATASIN BARIS DI SINI
+        )
         print("CSV terbaca (RF):", df.shape)
 
         # 2. Kolom numerik
@@ -245,11 +261,15 @@ async def run_rf(file: UploadFile = File(...)):
                 status_code=400,
             )
 
-        # 5. Sampling 5%
-        SAMPLE_FRAC = 0.05
-        df_sampled = pd.concat([X, y], axis=1).sample(frac=SAMPLE_FRAC, random_state=42)
+        # 5. Sampling 2%
+        df_sampled = pd.concat([X, y], axis=1).sample(
+            frac=SAMPLE_FRAC,
+            random_state=42,
+        )
         X = df_sampled.iloc[:, :-1]
         y = df_sampled.iloc[:, -1]
+
+        print(f"Sampling {SAMPLE_FRAC*100}% data (RF) →", X.shape)
 
         # 6. Train-test split
         X_train, X_test, y_train, y_test = train_test_split(
@@ -295,7 +315,6 @@ async def run_rf(file: UploadFile = File(...)):
 
         # 11. Summary + Conclusion
         gap_ratio = abs(mse_test - mse_train) / mse_train if mse_train > 0 else 0.0
-
         important_feature_name = feature_names[importance.argmax()]
 
         if gap_ratio < 0.2:
@@ -307,7 +326,8 @@ async def run_rf(file: UploadFile = File(...)):
 
         summary = (
             f"Random Forest dengan {model.n_estimators} trees dilatih "
-            f"menggunakan {len(X_train)} data train dan {len(X_test)} data test."
+            f"menggunakan {len(X_train)} data train dan {len(X_test)} data test "
+            f"dari maksimum {MAX_ROWS} baris pertama dataset."
         )
 
         conclusion = (
