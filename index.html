@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Sederhana - Cihuy APP</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="top-bar">
+    Deep Learning Portofolio
+  </header>
+
+  <!-- Hero section -->
+  <main class="hero">
+    <div class="hero-inner">
+      <p class="app-name">Muhammad Reinaldy Santoso Alaratte</p>
+      <h1 class="hero-title">Melakukan Prediksi Dataset menggunakan perbandingan Algoritma MLP dan Random Forest</h1>
+      <p class="hero-subtitle">
+        Upload file CSV kamu dan lihat preview datanya secara cepat.
+      </p>
+
+      <button id="uploadButton" class="btn-primary">
+        <span>Upload Data Set</span>
+        <span class="chevron"></span>
+      </button>
+      <input type="file" id="fileInput" accept=".csv" hidden />
+
+      <p id="fileName" class="file-name"></p>
+    </div>
+  </main>
+
+  <!-- Preview section -->
+  <section id="previewSection" class="preview hidden">
+    <h2>Preview Data</h2>
+    <p class="preview-note">
+      Menampilkan beberapa baris pertama dari file CSV yang diupload.
+    </p>
+    <div class="table-wrapper">
+      <table id="previewTable"></table>
+    </div>
+  </section>
+
+  <!-- Section pilihan algoritma -->
+  <section id="algorithmsSection" class="algorithms">
+    <h2>Tampilkan Berdasarkan Algoritma</h2>
+    <p class="algorithms-note">
+      Setelah file CSV di-upload, pilih algoritma untuk menampilkan hasil olahan datanya.
+    </p>
+    <div class="algorithms-buttons">
+      <button id="btnMLP" class="btn-secondary">
+        Tampilkan Algoritma MLP
+      </button>
+      <button id="btnRF" class="btn-secondary">
+        Tampilkan Algoritma Random Forest
+      </button>
+    </div>
+
+    <!-- Tambahan: tombol kesimpulan gabungan -->
+    <div class="algorithms-summary-row">
+      <button id="btnSummary" class="btn-secondary btn-summary" disabled>
+        Tampilkan Kesimpulan Gabungan
+      </button>
+    </div>
+  </section>
+
+  <!-- Section ringkasan/kesimpulan gabungan -->
+  <section id="summarySection" class="summary hidden">
+    <h2>Ringkasan Hasil MLP & Random Forest</h2>
+    <div id="summaryContent" class="summary-content"></div>
+  </section>
+
+  <!-- Popup / Modal -->
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <header class="modal-header">
+        <h3 id="modalTitle"></h3>
+        <button id="modalClose" class="modal-close">&times;</button>
+      </header>
+      <div id="modalBody" class="modal-body"></div>
+      <footer class="modal-footer">
+        <button id="modalOk" class="btn-primary btn-small">Tutup</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- urutan: modul MLP dulu, baru script utama -->
+  <script src="mlp.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
