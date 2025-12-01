@@ -109,12 +109,13 @@ function renderCsvPreview(csvText) {
   previewSection.classList.remove("hidden");
 }
 
-/* ======================================================
-   Backend API Call (MLP & RF via FastAPI)
-====================================================== */
+// =======================
+// BASE URL UNTUK BACKEND
+// =======================
+const BACKEND_BASE_URL = "https://mlp-rf.onrender.com";
 
-const MLP_API_URL = "http://127.0.0.1:8000/mlp"; // endpoint backend MLP
-const RF_API_URL = "http://127.0.0.1:8001/rf";   // endpoint backend RF
+const MLP_API_URL = `${BACKEND_BASE_URL}/mlp`;
+const RF_API_URL  = `${BACKEND_BASE_URL}/rf`;
 
 async function callMlpApi(file) {
   const formData = new FormData();
