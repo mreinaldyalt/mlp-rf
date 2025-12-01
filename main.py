@@ -35,9 +35,7 @@ def fig_to_base64():
     return "data:image/png;base64," + img_b64
 
 
-# ============================================================
-#  Endpoint MLP
-# ============================================================
+# ========================  ENDPOINT MLP  ========================
 @app.post("/mlp")
 async def run_mlp(file: UploadFile = File(...)):
     print("\n=== REQUEST MLP DITERIMA ===")
@@ -214,9 +212,7 @@ async def run_mlp(file: UploadFile = File(...)):
         )
 
 
-# ============================================================
-#  Endpoint Random Forest
-# ============================================================
+# =====================  ENDPOINT RANDOM FOREST  =====================
 @app.post("/rf")
 async def run_rf(file: UploadFile = File(...)):
     print("\n=== REQUEST RANDOM FOREST DITERIMA ===")
@@ -336,7 +332,7 @@ async def run_rf(file: UploadFile = File(...)):
             "metrics": {
                 "n_features": int(len(feature_names)),
                 "train_samples": int(len(X_train)),
-                "test_samples": int(len(X_Test)) if False else int(len(X_test)),  # menjaga konsistensi
+                "test_samples": int(len(X_test)),
                 "mse_train": mse_train,
                 "mse_test": mse_test,
                 "rmse_train": rmse_train,
