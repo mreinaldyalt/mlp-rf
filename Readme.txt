@@ -1,3 +1,8 @@
+Tujuan dari aplikasi ini adalah menyediakan alat evaluasi dan pembanding 
+model regresi berbasis machine learning yang dapat digunakan pada berbagai dataset numerik,
+sehingga pengguna dapat memahami karakteristik data mereka
+dan memilih algoritma yang paling sesuai berdasarkan hasil evaluasi model.
+
 Syarat Dataset:
 1. Dataset harus berformat CSV
 2. Dataset harus memiliki minimal 2 kolom numerik
