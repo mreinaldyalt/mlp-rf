@@ -868,17 +868,17 @@ function showGlobalSummary() {
   const gapRf = (mRf.gap_ratio ?? 0) * 100;
 
   const betterAlgo = (winner === "MLP")
-    ? "Pada dataset ini, MLP menghasilkan MSE test lebih kecil dibanding Random Forest → performa prediksi MLP lebih baik."
-    : (winner === "Random Forest")
-      ? "Pada dataset ini, Random Forest menghasilkan MSE test lebih kecil dibanding MLP → performa prediksi Random Forest lebih baik."
-      : "Pada dataset ini, nilai MSE test MLP dan Random Forest relatif sama → performanya sebanding.";
+  ? "Pada dataset yang diuji, MLP menghasilkan MSE test lebih kecil dibanding Random Forest → prediksi MLP lebih akurat pada data uji ini."
+  : (winner === "Random Forest")
+    ? "Pada dataset yang diuji, Random Forest menghasilkan MSE test lebih kecil dibanding MLP → prediksi Random Forest lebih akurat pada data uji ini."
+    : "Pada dataset yang diuji, nilai MSE test MLP dan Random Forest relatif sama → akurasi keduanya sebanding pada data uji ini.";
 
   const overfitNote = `
-    <ul>
-      <li><strong>Gap MLP:</strong> ${gapMlp.toFixed(1)}% (selisih MSE train vs test → indikasi over/underfitting)</li>
-      <li><strong>Gap RF:</strong> ${gapRf.toFixed(1)}% (selisih MSE train vs test → indikasi over/underfitting)</li>
-    </ul>
-  `;
+  <ul>
+    <li><strong>Gap MLP:</strong> ${gapMlp.toFixed(1)}% (selisih MSE train vs test → indikasi stabilitas generalisasi)</li>
+    <li><strong>Gap RF:</strong> ${gapRf.toFixed(1)}% (selisih MSE train vs test → indikasi stabilitas generalisasi)</li>
+  </ul>
+`;
 
     const targetName = mMlp?.target_name || mRf?.target_name || "(target)";
   const html = `
