@@ -61,11 +61,39 @@ fileInput.addEventListener("change", () => {
   fileNameText.textContent = `File terpilih: ${file.name}`;
 
   const reader = new FileReader();
-  reader.onload = (event) => {
-    const text = event.target.result;
-    csvRawText = text; // simpan teks CSV
-    renderCsvPreview(text);
-  };
+  reader.onload = async (event) => {
+  const text = event.target.result;
+  csvRawText = text;
+  renderCsvPreview(text);
+
+  // === LANGSUNG DATA PREPARATION ===
+  try {
+    showModal("Data Preparation", "<p>Menjalankan data preparation...</p>");
+
+    const formData = new FormData();
+    formData.append("file", currentFile);
+
+    const res = await fetch(`${BACKEND_BASE_URL}/prepare`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      showModal("Data Preparation Error", `<p>${data.error}</p>`);
+      return;
+    }
+
+    renderDataPreparation(data);
+  } catch (err) {
+    showModal(
+      "Data Preparation Error",
+      `<p>Gagal memproses data preparation:<br>${err.message}</p>`
+    );
+  }
+};
+
 
   reader.onerror = () => {
     alert("Gagal membaca file CSV.");
@@ -107,6 +135,49 @@ function renderCsvPreview(csvText) {
   });
 
   previewSection.classList.remove("hidden");
+}
+function renderDataPreparation(data) {
+  const stepsHtml = data.steps
+    .map(
+      (s) =>
+        `<li><strong>${s.title}</strong><br><span>${s.detail}</span></li>`
+    )
+    .join("");
+
+  const previewRows = data.preview
+    .map(
+      (row) =>
+        `<tr>${Object.values(row)
+          .map((v) => `<td>${v}</td>`)
+          .join("")}</tr>`
+    )
+    .join("");
+
+  const previewHead = data.columns
+    .map((c) => `<th>${c}</th>`)
+    .join("");
+
+  const html = `
+    <h3>Hasil Data Preparation</h3>
+    <p><strong>Ukuran data bersih:</strong> ${data.clean_shape[0]} baris × ${data.clean_shape[1]} kolom</p>
+
+    <h4>Langkah-langkah</h4>
+    <ol>${stepsHtml}</ol>
+
+    <h4>Preview Data Bersih</h4>
+    <div class="table-wrapper">
+      <table>
+        <tr>${previewHead}</tr>
+        ${previewRows}
+      </table>
+    </div>
+
+    <p style="margin-top:12px;">
+      ✅ Data sudah siap. Silakan pilih <strong>Algoritma MLP</strong> atau <strong>Random Forest</strong>.
+    </p>
+  `;
+
+  showModal("Data Preparation Selesai", html);
 }
 
 // =======================
