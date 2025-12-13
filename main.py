@@ -405,7 +405,7 @@ async def run_mlp(file: UploadFile = File(...)):
         if len(test_df) > max_points:
             test_df = test_df.sample(n=max_points, random_state=42)
 
-        test_points = []
+                test_points = []
         for _, row in test_df.iterrows():
             feats = {fn: (None if pd.isna(row[fn]) else float(row[fn])) for fn in feature_names}
             test_points.append({
@@ -414,7 +414,7 @@ async def run_mlp(file: UploadFile = File(...)):
                 "y_pred": float(row["__y_pred__"]),
             })
 
-                        summary = (
+        summary = (
             f"Model MLP (hidden layers={model.hidden_layer_sizes}, max_iter={model.max_iter}) "
             f"dilatih menggunakan {len(X_train)} data train dan {len(X_test)} data test "
             f"dari maksimum {MAX_ROWS} baris pertama dataset."
@@ -435,7 +435,7 @@ async def run_mlp(file: UploadFile = File(...)):
 
         conclusion = report["conclusion_text"]
 
-                return {
+        return {
             "steps": steps,
             "metrics": {
                 "n_features": int(X.shape[1]),
@@ -600,7 +600,7 @@ async def run_rf(file: UploadFile = File(...)):
         if len(test_df) > max_points:
             test_df = test_df.sample(n=max_points, random_state=42)
 
-        test_points = []
+                test_points = []
         for _, row in test_df.iterrows():
             feats = {fn: (None if pd.isna(row[fn]) else float(row[fn])) for fn in feature_names_full}
             test_points.append({
@@ -609,12 +609,11 @@ async def run_rf(file: UploadFile = File(...)):
                 "y_pred": float(row["__y_pred__"]),
             })
 
-                summary = (
+        summary = (
             f"Random Forest (n_estimators={model.n_estimators}) dilatih "
             f"menggunakan {len(X_train)} data train dan {len(X_test)} data test "
             f"dari maksimum {MAX_ROWS} baris pertama dataset."
         )
-
         report = build_report_narrative(
             algo_name="RF",
             target_name=str(target_name),
