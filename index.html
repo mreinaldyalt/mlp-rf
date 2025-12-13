@@ -85,8 +85,54 @@
     </div>
   </div>
 
-  <!-- urutan: modul MLP dulu, baru script utama -->
-  <script src="mlp.js"></script>
+   <!-- Section proses & visualisasi detail -->
+  <section id="processSection" class="preview hidden">
+    <h2>Proses & Visualisasi Detail</h2>
+    <p class="preview-note">
+      Menampilkan langkah verifikasi, cleansing, training, evaluasi, dan visualisasi secara bertahap.
+    </p>
+
+    <div id="processMeta" style="margin-bottom:12px;"></div>
+
+    <div style="display:grid; gap:12px;">
+      <div>
+        <h3 style="margin:8px 0;">Langkah Proses</h3>
+        <ol id="processSteps" style="line-height:1.5;"></ol>
+      </div>
+
+      <div>
+        <h3 style="margin:8px 0;">Filter Grafik (berdasarkan fitur)</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <label for="featureSelect">Pilih fitur:</label>
+          <select id="featureSelect"></select>
+          <small id="featureHint" style="opacity:.85;"></small>
+        </div>
+
+        <div style="margin-top:12px;">
+          <h4 style="margin:8px 0;">Grafik Interaktif: Actual vs Predicted (berdasarkan fitur)</h4>
+          <div id="featureScatterWrap"></div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <h4 style="margin:8px 0;">Grafik Trend Prediksi (data diurutkan berdasarkan fitur)</h4>
+          <div id="featureTrendWrap"></div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="margin:8px 0;">Grafik dari Backend</h3>
+        <div id="backendPlots"></div>
+      </div>
+
+      <div>
+        <h3 style="margin:8px 0;">Kesimpulan</h3>
+        <div id="algoConclusion"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- script utama -->
   <script src="script.js"></script>
 </body>
 </html>
+
