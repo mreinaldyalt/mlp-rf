@@ -5,7 +5,6 @@ window.addEventListener("unhandledrejection", (e) => {
   alert("PROMISE ERROR: " + (e?.reason?.message || e?.reason || e));
 });
 
-
 const uploadButton = document.getElementById("uploadButton");
 const fileInput = document.getElementById("fileInput");
 const fileNameText = document.getElementById("fileName");
@@ -102,11 +101,12 @@ setUploadStatus("📌 Menunggu proses...");
     const formData = new FormData();
     formData.append("file", currentFile);
 
-    const res = await fetchWithTimeout(
-      PREPARE_API_URL,
-      { method: "POST", body: formData },
-      60000
-    );
+    const res = await fetchWithRetry(
+  PREPARE_API_URL,
+  { method: "POST", body: formData },
+  120000,
+  1 // retry 1x kalau abort
+);
 
     // kalau CORS / 502, kasih error yang kebaca
     if (!res.ok) {
@@ -274,6 +274,35 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 60000) {
     clearTimeout(id);
   }
 }
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function fetchWithRetry(url, options, timeoutMs, retries = 1) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetchWithTimeout(url, options, timeoutMs);
+    } catch (err) {
+      lastErr = err;
+
+      const msg = String(err?.message || err);
+      const isAbort =
+        err?.name === "AbortError" ||
+        msg.toLowerCase().includes("aborted");
+
+      // retry cuma kalau abort / timeout
+      if (isAbort && attempt < retries) {
+        await sleep(1200); // jeda dikit
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
 
 // helper: status kecil di bawah nama file
 function setUploadStatus(msg) {
