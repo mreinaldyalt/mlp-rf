@@ -244,6 +244,7 @@ async function handleAlgorithmClick(algoName) {
 ====================================================== */
 
 function renderMlpModal(data) {
+  // Tetap pertahankan modal (fungsi lama tetap ada)
   const m = data.metrics;
   const summary = data.summary;
   const conclusion = data.conclusion || "Backend tidak mengirim kesimpulan.";
@@ -258,6 +259,8 @@ function renderMlpModal(data) {
       <li>Jumlah data test: <strong>${m.test_samples}</strong></li>
       <li>MSE train: <strong>${m.mse_train.toFixed(4)}</strong></li>
       <li>MSE test: <strong>${m.mse_test.toFixed(4)}</strong></li>
+      <li>RMSE test: <strong>${m.rmse_test.toFixed(4)}</strong></li>
+      <li>Gap ratio: <strong>${(m.gap_ratio * 100).toFixed(1)}%</strong></li>
     </ul>
 
     <p>${summary}</p>
@@ -275,6 +278,9 @@ function renderMlpModal(data) {
   `;
 
   showModal("Hasil Algoritma MLP", htmlResult);
+
+  // Tambahan baru: render detail proses & filter grafik di website (bukan cuma modal)
+  renderProcessSection("MLP", data);
 }
 
 function renderRfModal(data) {
@@ -292,6 +298,8 @@ function renderRfModal(data) {
       <li>Jumlah data test: <strong>${m.test_samples}</strong></li>
       <li>MSE train: <strong>${m.mse_train.toFixed(4)}</strong></li>
       <li>MSE test: <strong>${m.mse_test.toFixed(4)}</strong></li>
+      <li>RMSE test: <strong>${m.rmse_test.toFixed(4)}</strong></li>
+      <li>Gap ratio: <strong>${(m.gap_ratio * 100).toFixed(1)}%</strong></li>
       <li>Fitur paling berpengaruh: <strong>${m.top_feature}</strong></li>
     </ul>
 
@@ -310,21 +318,289 @@ function renderRfModal(data) {
   `;
 
   showModal("Hasil Algoritma Random Forest", htmlResult);
+
+  // Tambahan baru: render detail proses & filter grafik di website
+  renderProcessSection("RF", data);
 }
 
 /* ======================================================
-   Tombol Kesimpulan Gabungan
+   SECTION PROSES & VISUALISASI DETAIL (BARU)
 ====================================================== */
 
-function updateSummaryButtonState() {
-  if (lastMlpResult && lastRfResult) {
-    btnSummary.disabled = false;
-    btnSummary.classList.add("enabled");
-  } else {
-    btnSummary.disabled = true;
-    btnSummary.classList.remove("enabled");
-  }
+const processSection = document.getElementById("processSection");
+const processMeta = document.getElementById("processMeta");
+const processStepsEl = document.getElementById("processSteps");
+const featureSelect = document.getElementById("featureSelect");
+const featureHint = document.getElementById("featureHint");
+const featureScatterWrap = document.getElementById("featureScatterWrap");
+const featureTrendWrap = document.getElementById("featureTrendWrap");
+const backendPlots = document.getElementById("backendPlots");
+const algoConclusionEl = document.getElementById("algoConclusion");
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
+
+function renderProcessSection(algoName, data) {
+  if (!processSection) return;
+
+  // show section
+  processSection.classList.remove("hidden");
+
+  const m = data.metrics || {};
+  const steps = data.steps || [];
+  const plots = data.plots || {};
+  const interactive = data.interactive || {};
+  const testPoints = interactive.test_points || [];
+  const featNames = (m.feature_names || []).slice(); // array
+
+  processMeta.innerHTML = `
+    <div style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);">
+      <strong>Algoritma aktif:</strong> ${escapeHtml(algoName)}<br/>
+      <strong>Target:</strong> ${escapeHtml(m.target_name || "-")}<br/>
+      <strong>Train/Test:</strong> ${m.train_samples ?? "-"} / ${m.test_samples ?? "-"}<br/>
+      <strong>MSE test:</strong> ${m.mse_test != null ? m.mse_test.toFixed(4) : "-"} |
+      <strong>RMSE test:</strong> ${m.rmse_test != null ? m.rmse_test.toFixed(4) : "-"} |
+      <strong>Gap:</strong> ${m.gap_ratio != null ? (m.gap_ratio * 100).toFixed(1) + "%" : "-"}
+      ${m.top_feature ? `<br/><strong>Top Feature (RF):</strong> ${escapeHtml(m.top_feature)}` : ""}
+    </div>
+  `;
+
+  // langkah proses
+  processStepsEl.innerHTML = "";
+  steps.forEach((s) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${escapeHtml(s.title)}</strong><br/><span style="opacity:.9">${escapeHtml(s.detail)}</span>`;
+    processStepsEl.appendChild(li);
+  });
+
+  // backend plots (yang sudah ada)
+  backendPlots.innerHTML = "";
+  if (algoName === "MLP" && plots.loss_curve) {
+    backendPlots.innerHTML += `
+      <div style="margin:10px 0;">
+        <h4 style="margin:6px 0;">Loss Curve</h4>
+        <img src="${plots.loss_curve}" alt="Loss Curve" style="max-width:100%;border-radius:8px;" />
+      </div>
+    `;
+  }
+  if (plots.pred_vs_actual) {
+    backendPlots.innerHTML += `
+      <div style="margin:10px 0;">
+        <h4 style="margin:6px 0;">Prediksi vs Aktual</h4>
+        <img src="${plots.pred_vs_actual}" alt="Prediksi vs Aktual" style="max-width:100%;border-radius:8px;" />
+      </div>
+    `;
+  }
+  if (algoName === "RF" && plots.feature_importance) {
+    backendPlots.innerHTML += `
+      <div style="margin:10px 0;">
+        <h4 style="margin:6px 0;">Feature Importance</h4>
+        <img src="${plots.feature_importance}" alt="Feature Importance" style="max-width:100%;border-radius:8px;" />
+      </div>
+    `;
+  }
+
+  // kesimpulan algo
+  algoConclusionEl.innerHTML = `
+    <div style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);line-height:1.5;">
+      <div style="margin-bottom:8px;"><strong>Summary:</strong> ${escapeHtml(data.summary || "-")}</div>
+      <div><strong>Conclusion:</strong><br/><span style="white-space:pre-line">${escapeHtml(data.conclusion || "-")}</span></div>
+    </div>
+  `;
+
+  // setup filter fitur
+  renderFeatureSelector(featNames, testPoints, m.target_name || "target");
+
+  // scroll
+  processSection.scrollIntoView({ behavior: "smooth" });
+}
+
+function renderFeatureSelector(featureNames, testPoints, targetName) {
+  if (!featureSelect) return;
+
+  // fallback kalau backend belum kirim
+  if (!Array.isArray(featureNames) || featureNames.length === 0) {
+    featureSelect.innerHTML = `<option value="">(fitur tidak tersedia)</option>`;
+    featureHint.textContent = "";
+    featureScatterWrap.innerHTML = "";
+    featureTrendWrap.innerHTML = "";
+    return;
+  }
+
+  // isi dropdown
+  featureSelect.innerHTML = featureNames
+    .map((fn, i) => `<option value="${escapeHtml(fn)}">${i + 1}. ${escapeHtml(fn)}</option>`)
+    .join("");
+
+  featureHint.textContent = `Pilih fitur untuk melihat korelasi dengan ${targetName} (dibatasi max ${testPoints.length} titik dari test).`;
+
+  const initial = featureNames[0];
+  drawInteractiveCharts(initial, testPoints);
+
+  featureSelect.onchange = () => {
+    const fn = featureSelect.value;
+    drawInteractiveCharts(fn, testPoints);
+  };
+}
+
+function drawInteractiveCharts(featureName, testPoints) {
+  if (!featureName) return;
+
+  // ambil (x=fitur, ytrue, ypred)
+  const pts = [];
+  for (const p of testPoints) {
+    const x = p.features?.[featureName];
+    const yt = p.y_true;
+    const yp = p.y_pred;
+    if (x == null || !Number.isFinite(x) || !Number.isFinite(yt) || !Number.isFinite(yp)) continue;
+    pts.push({ x, yt, yp });
+  }
+
+  if (pts.length < 5) {
+    featureScatterWrap.innerHTML = `<p style="opacity:.9;">Data tidak cukup untuk menggambar grafik dari fitur ini.</p>`;
+    featureTrendWrap.innerHTML = "";
+    return;
+  }
+
+  featureScatterWrap.innerHTML = renderSvgScatter(pts, featureName);
+  featureTrendWrap.innerHTML = renderSvgTrend(pts, featureName);
+}
+
+function minMax(arr, key) {
+  let mn = Infinity, mx = -Infinity;
+  for (const o of arr) {
+    const v = o[key];
+    if (v < mn) mn = v;
+    if (v > mx) mx = v;
+  }
+  if (!Number.isFinite(mn) || !Number.isFinite(mx) || mn === mx) {
+    // biar gak div 0
+    mn = mn === Infinity ? 0 : mn - 1;
+    mx = mx === -Infinity ? 1 : mx + 1;
+  }
+  return [mn, mx];
+}
+
+// SVG Scatter: x=feature, y=target (tampilkan 2 layer: y_true dan y_pred)
+function renderSvgScatter(pts, featureName) {
+  const W = 820, H = 320;
+  const pad = 35;
+
+  const [xmin, xmax] = minMax(pts, "x");
+  const [yminA, ymaxA] = minMax(pts, "yt");
+  const [yminP, ymaxP] = minMax(pts, "yp");
+  const ymin = Math.min(yminA, yminP);
+  const ymax = Math.max(ymaxA, ymaxP);
+
+  const sx = (x) => pad + ((x - xmin) / (xmax - xmin)) * (W - pad * 2);
+  const sy = (y) => (H - pad) - ((y - ymin) / (ymax - ymin)) * (H - pad * 2);
+
+  const dotsTrue = pts.map(p => `<circle cx="${sx(p.x).toFixed(2)}" cy="${sy(p.yt).toFixed(2)}" r="2.4" opacity="0.55"></circle>`).join("");
+  const dotsPred = pts.map(p => `<circle cx="${sx(p.x).toFixed(2)}" cy="${sy(p.yp).toFixed(2)}" r="2.4" opacity="0.55"></circle>`).join("");
+
+  return `
+    <div style="overflow:auto; border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px;">
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+        <strong>${escapeHtml(featureName)}</strong>
+        <span style="opacity:.85;">(Scatter) ● Actual & ● Predicted</span>
+      </div>
+      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+        <!-- axes -->
+        <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" opacity="0.5"></line>
+        <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H - pad}" opacity="0.5"></line>
+
+        <!-- labels -->
+        <text x="${pad}" y="${pad - 10}" font-size="12" opacity="0.9">y (target)</text>
+        <text x="${W - pad - 80}" y="${H - 8}" font-size="12" opacity="0.9">x (feature)</text>
+
+        <!-- points (actual) -->
+        <g>
+          ${dotsTrue}
+        </g>
+
+        <!-- points (predicted) -->
+        <g>
+          ${dotsPred}
+        </g>
+
+        <!-- legend -->
+        <g transform="translate(${pad + 10}, ${pad + 5})" opacity="0.9">
+          <text x="0" y="0" font-size="12">Legend:</text>
+          <text x="0" y="16" font-size="12">• Actual (y_true)</text>
+          <text x="0" y="32" font-size="12">• Predicted (y_pred)</text>
+        </g>
+      </svg>
+      <small style="display:block; opacity:.85;">
+        Tips: kalau titik Predicted jauh dari Actual, berarti error besar pada rentang fitur itu.
+      </small>
+    </div>
+  `;
+}
+
+// SVG Trend: urutkan berdasarkan fitur lalu gambar 2 garis (actual vs predicted)
+function renderSvgTrend(pts, featureName) {
+  const W = 820, H = 320;
+  const pad = 35;
+
+  const sorted = pts.slice().sort((a, b) => a.x - b.x);
+  const [xmin, xmax] = minMax(sorted, "x");
+  const [yminA, ymaxA] = minMax(sorted, "yt");
+  const [yminP, ymaxP] = minMax(sorted, "yp");
+  const ymin = Math.min(yminA, yminP);
+  const ymax = Math.max(ymaxA, ymaxP);
+
+  const sx = (x) => pad + ((x - xmin) / (xmax - xmin)) * (W - pad * 2);
+  const sy = (y) => (H - pad) - ((y - ymin) / (ymax - ymin)) * (H - pad * 2);
+
+  function toPath(key) {
+    let d = "";
+    for (let i = 0; i < sorted.length; i++) {
+      const p = sorted[i];
+      const x = sx(p.x), y = sy(p[key]);
+      d += (i === 0 ? "M" : "L") + x.toFixed(2) + "," + y.toFixed(2) + " ";
+    }
+    return d.trim();
+  }
+
+  const pathTrue = toPath("yt");
+  const pathPred = toPath("yp");
+
+  return `
+    <div style="overflow:auto; border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px;">
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+        <strong>${escapeHtml(featureName)}</strong>
+        <span style="opacity:.85;">(Trend) garis Actual vs Predicted setelah data diurutkan berdasarkan fitur</span>
+      </div>
+      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+        <!-- axes -->
+        <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" opacity="0.5"></line>
+        <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H - pad}" opacity="0.5"></line>
+
+        <path d="${pathTrue}" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.65"></path>
+        <path d="${pathPred}" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.35"></path>
+
+        <g transform="translate(${pad + 10}, ${pad + 5})" opacity="0.9">
+          <text x="0" y="0" font-size="12">Legend:</text>
+          <text x="0" y="16" font-size="12">— Actual (y_true)</text>
+          <text x="0" y="32" font-size="12">— Predicted (y_pred)</text>
+        </g>
+      </svg>
+      <small style="display:block; opacity:.85;">
+        Ini bukan time-series asli (karena kita tidak tahu kolom waktu). “Trend” dibuat dengan mengurutkan data berdasarkan fitur terpilih.
+      </small>
+    </div>
+  `;
+}
+
+/* ======================================================
+   Kesimpulan Gabungan (upgrade narasi)
+====================================================== */
 
 function showGlobalSummary() {
   if (!lastMlpResult || !lastRfResult) {
@@ -338,51 +614,67 @@ function showGlobalSummary() {
   const cRf = lastRfResult.conclusion || "";
 
   // Bandingkan performa berdasarkan MSE test
-  let betterAlgo = "";
-  if (mMlp.mse_test < mRf.mse_test) {
-    betterAlgo = "Pada dataset ini, MLP menghasilkan nilai MSE test yang lebih kecil dibandingkan Random Forest, sehingga secara umum MLP memberikan performa prediksi yang lebih baik.";
-  } else if (mMlp.mse_test > mRf.mse_test) {
-    betterAlgo = "Pada dataset ini, Random Forest menghasilkan nilai MSE test yang lebih kecil dibandingkan MLP, sehingga secara umum Random Forest memberikan performa prediksi yang lebih baik.";
-  } else {
-    betterAlgo = "Pada dataset ini, nilai MSE test MLP dan Random Forest relatif sama, sehingga keduanya memiliki performa yang sebanding.";
-  }
+  let winner = "Seimbang";
+  if (mMlp.mse_test < mRf.mse_test) winner = "MLP";
+  if (mMlp.mse_test > mRf.mse_test) winner = "Random Forest";
+
+  const gapMlp = (mMlp.gap_ratio ?? 0) * 100;
+  const gapRf = (mRf.gap_ratio ?? 0) * 100;
+
+  const betterAlgo = (winner === "MLP")
+    ? "Pada dataset ini, MLP menghasilkan MSE test lebih kecil dibanding Random Forest → performa prediksi MLP lebih baik."
+    : (winner === "Random Forest")
+      ? "Pada dataset ini, Random Forest menghasilkan MSE test lebih kecil dibanding MLP → performa prediksi Random Forest lebih baik."
+      : "Pada dataset ini, nilai MSE test MLP dan Random Forest relatif sama → performanya sebanding.";
+
+  const overfitNote = `
+    <ul>
+      <li><strong>Gap MLP:</strong> ${gapMlp.toFixed(1)}% (selisih MSE train vs test → indikasi over/underfitting)</li>
+      <li><strong>Gap RF:</strong> ${gapRf.toFixed(1)}% (selisih MSE train vs test → indikasi over/underfitting)</li>
+    </ul>
+  `;
 
   const html = `
+    <h3>Perbandingan Utama</h3>
+    <ul>
+      <li><strong>Pemenang berdasarkan MSE test:</strong> ${winner}</li>
+      <li><strong>MSE test:</strong> MLP=${mMlp.mse_test.toFixed(4)} vs RF=${mRf.mse_test.toFixed(4)}</li>
+      <li><strong>RMSE test:</strong> MLP=${mMlp.rmse_test.toFixed(4)} vs RF=${mRf.rmse_test.toFixed(4)}</li>
+    </ul>
+
     <h3>Ringkasan MLP</h3>
     <ul>
       <li>Jumlah fitur: <strong>${mMlp.n_features}</strong></li>
-      <li>Data train: <strong>${mMlp.train_samples}</strong></li>
-      <li>Data test: <strong>${mMlp.test_samples}</strong></li>
-      <li>MSE train: <strong>${mMlp.mse_train.toFixed(4)}</strong></li>
-      <li>MSE test: <strong>${mMlp.mse_test.toFixed(4)}</strong></li>
-      <li>RMSE train: <strong>${mMlp.rmse_train.toFixed(4)}</strong></li>
-      <li>RMSE test: <strong>${mMlp.rmse_test.toFixed(4)}</strong></li>
+      <li>Data train/test: <strong>${mMlp.train_samples}</strong> / <strong>${mMlp.test_samples}</strong></li>
+      <li>MSE train/test: <strong>${mMlp.mse_train.toFixed(4)}</strong> / <strong>${mMlp.mse_test.toFixed(4)}</strong></li>
+      <li>RMSE train/test: <strong>${mMlp.rmse_train.toFixed(4)}</strong> / <strong>${mMlp.rmse_test.toFixed(4)}</strong></li>
     </ul>
-    <p style="white-space: pre-line;">${cMlp}</p>
+    <p style="white-space: pre-line;">${escapeHtml(cMlp)}</p>
 
     <hr style="margin: 16px 0; border-color: rgba(255,255,255,0.15);" />
 
     <h3>Ringkasan Random Forest</h3>
     <ul>
       <li>Jumlah fitur: <strong>${mRf.n_features}</strong></li>
-      <li>Data train: <strong>${mRf.train_samples}</strong></li>
-      <li>Data test: <strong>${mRf.test_samples}</strong></li>
-      <li>MSE train: <strong>${mRf.mse_train.toFixed(4)}</strong></li>
-      <li>MSE test: <strong>${mRf.mse_test.toFixed(4)}</strong></li>
-      <li>RMSE train: <strong>${mRf.rmse_train.toFixed(4)}</strong></li>
-      <li>RMSE test: <strong>${mRf.rmse_test.toFixed(4)}</strong></li>
-      <li>Fitur paling berpengaruh (RF): <strong>${mRf.top_feature}</strong></li>
+      <li>Data train/test: <strong>${mRf.train_samples}</strong> / <strong>${mRf.test_samples}</strong></li>
+      <li>MSE train/test: <strong>${mRf.mse_train.toFixed(4)}</strong> / <strong>${mRf.mse_test.toFixed(4)}</strong></li>
+      <li>RMSE train/test: <strong>${mRf.rmse_train.toFixed(4)}</strong> / <strong>${mRf.rmse_test.toFixed(4)}</strong></li>
+      <li>Fitur paling berpengaruh (RF): <strong>${escapeHtml(mRf.top_feature)}</strong></li>
     </ul>
-    <p style="white-space: pre-line;">${cRf}</p>
+    <p style="white-space: pre-line;">${escapeHtml(cRf)}</p>
 
     <hr style="margin: 16px 0; border-color: rgba(255,255,255,0.15);" />
 
-    <h3>Perbandingan MLP vs Random Forest</h3>
-    <p>${betterAlgo}</p>
+    <h3>Analisis Tambahan</h3>
+    <p>${escapeHtml(betterAlgo)}</p>
+    <h4>Indikasi Overfitting / Generalisasi</h4>
+    ${overfitNote}
+
     <p>
-      Secara umum, perbandingan error (MSE/ RMSE) dan karakteristik model ini dapat dijadikan dasar
-      untuk menjelaskan ke dosen mana algoritma yang lebih sesuai untuk kasus prediksi kelembapan
-      udara pada dataset cuaca yang digunakan, serta bagaimana trade-off antara kompleksitas model dan akurasi.
+      Kesimpulan ini bisa kamu pakai untuk jelasin ke dosen:
+      (1) siapa error paling kecil, (2) siapa gap train-test paling stabil,
+      (3) Random Forest lebih mudah interpretasi lewat feature importance,
+      sedangkan MLP butuh scaling dan lebih sensitif hyperparameter.
     </p>
   `;
 
@@ -392,27 +684,7 @@ function showGlobalSummary() {
 }
 
 /* ======================================================
-   Dummy Output (fallback, tidak dipakai lagi)
-====================================================== */
-
-function generateDummyResult(algoName, csvText) {
-  const rows = csvText.trim().split(/\r?\n/);
-  const delimiter = rows.length > 0 ? detectDelimiter(rows[0]) : ",";
-  const header = rows.length > 0 ? rows[0].split(delimiter) : [];
-  const rowCount = Math.max(rows.length - 1, 0);
-
-  return `
-    <p>Ini adalah <strong>placeholder</strong> untuk algoritma <strong>${algoName}</strong>.</p>
-    <ul>
-      <li>Jumlah kolom (fitur): <strong>${header.length}</strong></li>
-      <li>Jumlah baris data (tanpa header): <strong>${rowCount}</strong></li>
-    </ul>
-    <p>Nanti bagian ini bisa diganti dengan output algoritma yang sebenarnya.</p>
-  `;
-}
-
-/* ======================================================
-   Modal Helpers
+   Modal Helpers (tetap)
 ====================================================== */
 
 function showModal(title, htmlContent) {
@@ -431,3 +703,4 @@ modalOk.addEventListener("click", hideModal);
 modalOverlay.addEventListener("click", (e) => {
   if (e.target === modalOverlay) hideModal();
 });
+
