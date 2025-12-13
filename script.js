@@ -1,3 +1,11 @@
+window.addEventListener("error", (e) => {
+  alert("JS ERROR: " + (e?.message || e));
+});
+window.addEventListener("unhandledrejection", (e) => {
+  alert("PROMISE ERROR: " + (e?.reason?.message || e?.reason || e));
+});
+
+
 const uploadButton = document.getElementById("uploadButton");
 const fileInput = document.getElementById("fileInput");
 const fileNameText = document.getElementById("fileName");
@@ -27,6 +35,20 @@ let currentFile = null;
 // Menyimpan hasil terakhir MLP & RF (untuk kesimpulan gabungan & reuse popup)
 let lastMlpResult = null;
 let lastRfResult = null;
+
+// ✅ FIX: fungsi ini WAJIB ada karena dipanggil saat upload & setelah training
+function updateSummaryButtonState() {
+  if (!btnSummary) return;
+
+  if (lastMlpResult && lastRfResult) {
+    btnSummary.disabled = false;
+    btnSummary.classList.add("enabled");
+  } else {
+    btnSummary.disabled = true;
+    btnSummary.classList.remove("enabled");
+  }
+}
+
 
 /* ======================================================
    Upload & preview CSV
