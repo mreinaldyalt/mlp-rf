@@ -49,6 +49,76 @@ def fig_to_base64():
     plt.close()
     return "data:image/png;base64," + img_b64
 
+# ================================================================
+#  ENDPOINT DATA PREPARATION
+# ================================================================
+@app.post("/prepare")
+async def prepare_data(file: UploadFile = File(...)):
+    steps = []
+
+    def step(title, detail):
+        steps.append({"title": title, "detail": detail})
+
+    try:
+        content = await file.read()
+        df = pd.read_csv(
+            io.BytesIO(content),
+            sep=None,
+            engine="python",
+            nrows=MAX_ROWS,
+        )
+
+        step("1) Load Dataset", f"Dataset awal: {df.shape[0]} baris × {df.shape[1]} kolom.")
+
+        # Ambil numerik
+        numeric = df.select_dtypes(include="number").copy()
+        step("2) Seleksi Kolom Numerik", f"{numeric.shape[1]} kolom numerik terdeteksi.")
+
+        # Duplikat
+        before = numeric.shape[0]
+        numeric = numeric.drop_duplicates()
+        step(
+            "3) Hapus Duplikasi",
+            f"{before - numeric.shape[0]} baris duplikat dihapus."
+        )
+
+        # Missing value
+        before = numeric.shape[0]
+        numeric = numeric.replace([float("inf"), float("-inf")], pd.NA)
+        numeric = numeric.dropna()
+        step(
+            "4) Missing Value & Data Error",
+            f"{before - numeric.shape[0]} baris mengandung NaN/Inf dihapus."
+        )
+
+        # Outlier (IQR — hanya laporan)
+        Q1 = numeric.quantile(0.25)
+        Q3 = numeric.quantile(0.75)
+        IQR = Q3 - Q1
+        outlier_mask = ((numeric < (Q1 - 1.5 * IQR)) | (numeric > (Q3 + 1.5 * IQR)))
+        outlier_rows = outlier_mask.any(axis=1).sum()
+
+        step(
+            "5) Deteksi Outlier (IQR)",
+            f"Terdeteksi ±{outlier_rows} baris outlier (tidak dihapus, hanya ditandai)."
+        )
+
+        # Preview data bersih (10 baris)
+        preview = numeric.head(10).to_dict(orient="records")
+
+        return {
+            "steps": steps,
+            "clean_shape": numeric.shape,
+            "preview": preview,
+            "columns": numeric.columns.tolist(),
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            {"error": f"Error data preparation: {str(e)}"},
+            status_code=500,
+        )
+
 
 # ================================================================
 #  ENDPOINT MLP
