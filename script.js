@@ -470,8 +470,15 @@ function renderMlpModal(data) {
     <img src="${scatterImg}" alt="Prediksi vs Aktual (MLP)"
          style="max-width:100%;border-radius:8px;margin-bottom:16px;" />
 
+        <h4>Tujuan & Prediksi</h4>
+    <div style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);margin-bottom:12px;line-height:1.5;">
+      <div><strong>Tujuan:</strong> ${escapeHtml(data.report?.objective || "Membandingkan model regresi untuk memprediksi target numerik dari fitur numerik lain.")}</div>
+      <div style="margin-top:6px;"><strong>Apa yang diprediksi:</strong> ${escapeHtml(data.report?.what_predicted || `Target: ${m.target_name}`)}</div>
+      <div style="margin-top:6px;"><strong>Arti error:</strong> ${escapeHtml(data.report?.rmse_explain || "")}</div>
+    </div>
+
     <h4>Kesimpulan</h4>
-    <p style="white-space: pre-line;">${conclusion}</p>
+    <p style="white-space: pre-line;">${escapeHtml(data.report?.conclusion_text || conclusion)}</p>
   `;
 
   showModal("Hasil Algoritma MLP", htmlResult);
@@ -510,8 +517,16 @@ function renderRfModal(data) {
     <img src="${fiImg}" alt="Feature Importance Random Forest"
          style="max-width:100%;border-radius:8px;margin-bottom:16px;" />
 
+        <h4>Tujuan & Prediksi</h4>
+    <div style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);margin-bottom:12px;line-height:1.5;">
+      <div><strong>Tujuan:</strong> ${escapeHtml(data.report?.objective || "Membandingkan model regresi untuk memprediksi target numerik dari fitur numerik lain.")}</div>
+      <div style="margin-top:6px;"><strong>Apa yang diprediksi:</strong> ${escapeHtml(data.report?.what_predicted || `Target: ${m.target_name}`)}</div>
+      <div style="margin-top:6px;"><strong>Arti error:</strong> ${escapeHtml(data.report?.rmse_explain || "")}</div>
+      <div style="margin-top:6px;"><strong>Insight:</strong> ${escapeHtml(data.report?.insight || "")}</div>
+    </div>
+
     <h4>Kesimpulan</h4>
-    <p style="white-space: pre-line;">${conclusion}</p>
+    <p style="white-space: pre-line;">${escapeHtml(data.report?.conclusion_text || conclusion)}</p>
   `;
 
   showModal("Hasil Algoritma Random Forest", htmlResult);
@@ -604,10 +619,44 @@ function renderProcessSection(algoName, data) {
   }
 
   // kesimpulan algo
+    const rep = data.report || {};
+
   algoConclusionEl.innerHTML = `
     <div style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);line-height:1.5;">
-      <div style="margin-bottom:8px;"><strong>Summary:</strong> ${escapeHtml(data.summary || "-")}</div>
-      <div><strong>Conclusion:</strong><br/><span style="white-space:pre-line">${escapeHtml(data.conclusion || "-")}</span></div>
+      <div style="margin-bottom:10px;">
+        <strong>Tujuan:</strong><br/>
+        <span style="opacity:.95">${escapeHtml(rep.objective || "-")}</span>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <strong>Prediksi yang dilakukan:</strong><br/>
+        <span style="opacity:.95">${escapeHtml(rep.what_predicted || `Target: ${m.target_name || "-"}`)}</span>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <strong>Arti error (RMSE):</strong><br/>
+        <span style="opacity:.95">${escapeHtml(rep.rmse_explain || "-")}</span>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <strong>Generalisasi (train vs test):</strong><br/>
+        <span style="opacity:.95">${escapeHtml(rep.generalization || "-")}</span>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <strong>Insight:</strong><br/>
+        <span style="opacity:.95">${escapeHtml(rep.insight || "-")}</span>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <strong>Rekomendasi keputusan:</strong><br/>
+        <span style="opacity:.95">${escapeHtml(rep.decision_guidance || "-")}</span>
+      </div>
+
+      <div style="margin-bottom:2px;">
+        <strong>Catatan tuning:</strong><br/>
+        <span style="opacity:.95">${escapeHtml(rep.tuning_note || "-")}</span>
+      </div>
     </div>
   `;
 
@@ -831,7 +880,15 @@ function showGlobalSummary() {
     </ul>
   `;
 
+    const targetName = mMlp?.target_name || mRf?.target_name || "(target)";
   const html = `
+    <h3>Tujuan & Prediksi</h3>
+    <p>
+      Program ini melakukan <strong>regresi</strong> untuk memprediksi nilai numerik
+      <strong>${escapeHtml(targetName)}</strong> dari fitur numerik lainnya, lalu membandingkan
+      performa <strong>MLP</strong> dan <strong>Random Forest</strong> pada data uji.
+    </p>
+
     <h3>Perbandingan Utama</h3>
     <ul>
       <li><strong>Pemenang berdasarkan MSE test:</strong> ${winner}</li>
