@@ -598,7 +598,7 @@ async def run_rf(file: UploadFile = File(...)):
         test_df["__y_true__"] = y_test.values
         test_df["__y_pred__"] = y_test_pred
 
-               if len(test_df) > max_points:
+        if len(test_df) > max_points:
             test_df = test_df.sample(n=max_points, random_state=42)
 
         test_points = []
