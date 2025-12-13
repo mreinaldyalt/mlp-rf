@@ -414,7 +414,7 @@ async def run_mlp(file: UploadFile = File(...)):
                 "y_pred": float(row["__y_pred__"]),
             })
 
-                summary = (
+                        summary = (
             f"Model MLP (hidden layers={model.hidden_layer_sizes}, max_iter={model.max_iter}) "
             f"dilatih menggunakan {len(X_train)} data train dan {len(X_test)} data test "
             f"dari maksimum {MAX_ROWS} baris pertama dataset."
@@ -433,10 +433,9 @@ async def run_mlp(file: UploadFile = File(...)):
             top_feature=None,
         )
 
-        # tetap kirim conclusion (tapi sekarang versi template yang jelas)
         conclusion = report["conclusion_text"]
 
-        return {
+                return {
             "steps": steps,
             "metrics": {
                 "n_features": int(X.shape[1]),
@@ -458,7 +457,7 @@ async def run_mlp(file: UploadFile = File(...)):
                 "test_points": test_points,
                 "max_points": max_points,
             },
-                        "summary": summary,
+            "summary": summary,
             "conclusion": conclusion,
             "report": report,
         }
