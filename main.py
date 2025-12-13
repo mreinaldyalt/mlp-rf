@@ -394,8 +394,7 @@ async def run_mlp(file: UploadFile = File(...)):
         scatter_img = fig_to_base64()
 
         step("14) Visualisasi", "Menghasilkan grafik Loss Curve dan Prediksi vs Aktual.")
-
-                # 16. Siapkan data ringan untuk filter grafik di frontend (batasi agar payload aman)
+        # 16. Siapkan data ringan untuk filter grafik di frontend (batasi agar payload aman)
         # ambil max 500 titik dari test untuk interaktif
         max_points = 500
         test_df = X_test.copy()
@@ -599,17 +598,19 @@ async def run_rf(file: UploadFile = File(...)):
         test_df["__y_true__"] = y_test.values
         test_df["__y_pred__"] = y_test_pred
 
-        if len(test_df) > max_points:
+               if len(test_df) > max_points:
             test_df = test_df.sample(n=max_points, random_state=42)
 
-                test_points = []
+        test_points = []
         for _, row in test_df.iterrows():
             feats = {fn: (None if pd.isna(row[fn]) else float(row[fn])) for fn in feature_names_full}
-            test_points.append({
-                "features": feats,
-                "y_true": float(row["__y_true__"]),
-                "y_pred": float(row["__y_pred__"]),
-            })
+            test_points.append(
+                {
+                    "features": feats,
+                    "y_true": float(row["__y_true__"]),
+                    "y_pred": float(row["__y_pred__"]),
+                }
+            )
 
         summary = (
             f"Random Forest (n_estimators={model.n_estimators}) dilatih "
