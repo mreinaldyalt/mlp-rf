@@ -57,42 +57,67 @@ fileInput.addEventListener("change", () => {
     fileInput.value = "";
     return;
   }
-
   fileNameText.textContent = `File terpilih: ${file.name}`;
+fileNameText.dataset.baseName = fileNameText.textContent;
+setUploadStatus("📌 Menunggu proses...");
 
   const reader = new FileReader();
   reader.onload = async (event) => {
   const text = event.target.result;
   csvRawText = text;
+
+  // tampilkan preview dulu (fungsi lama jangan hilang)
   renderCsvPreview(text);
 
-  // === LANGSUNG DATA PREPARATION ===
-  try {
-    showModal("Data Preparation", "<p>Menjalankan data preparation...</p>");
+  // notifikasi langsung (biar user tau lagi proses)
+  showModal("Data Preparation", `
+    <p><strong>Loading...</strong></p>
+    <p>Menjalankan data preparation di backend (Render kadang butuh beberapa detik kalau baru bangun).</p>
+  `);
+  setUploadStatus("⏳ Menjalankan data preparation...");
 
+  try {
     const formData = new FormData();
     formData.append("file", currentFile);
 
-    const res = await fetch(`${BACKEND_BASE_URL}/prepare`, {
-      method: "POST",
-      body: formData,
-    });
+    const res = await fetchWithTimeout(
+      PREPARE_API_URL,
+      { method: "POST", body: formData },
+      60000
+    );
+
+    // kalau CORS / 502, kasih error yang kebaca
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`Prepare gagal. Status ${res.status}: ${t}`);
+    }
 
     const data = await res.json();
 
     if (data.error) {
       showModal("Data Preparation Error", `<p>${data.error}</p>`);
+      setUploadStatus("❌ Data preparation gagal (lihat modal).");
       return;
     }
 
+    // tampilkan ke modal (yang sudah ada)
     renderDataPreparation(data);
+
+    // tampilkan juga ke halaman (processSection) biar sesuai request kamu
+    renderPreparationToProcessSection(data);
+
+    setUploadStatus("✅ Data preparation selesai. Silakan pilih MLP / RF.");
+
   } catch (err) {
     showModal(
       "Data Preparation Error",
-      `<p>Gagal memproses data preparation:<br>${err.message}</p>`
+      `<p>Gagal memproses data preparation:<br><code>${err.message}</code></p>
+       <p>Catatan: kalau Render baru bangun (cold start), coba upload lagi 1x.</p>`
     );
+    setUploadStatus("❌ Data preparation gagal (cek modal).");
   }
 };
+
 
 
   reader.onerror = () => {
@@ -179,14 +204,64 @@ function renderDataPreparation(data) {
 
   showModal("Data Preparation Selesai", html);
 }
+function renderPreparationToProcessSection(data) {
+  // pakai section proses yang sudah ada
+  const processSection = document.getElementById("processSection");
+  const processMeta = document.getElementById("processMeta");
+  const processStepsEl = document.getElementById("processSteps");
+
+  if (!processSection || !processMeta || !processStepsEl) return;
+
+  processSection.classList.remove("hidden");
+
+  processMeta.innerHTML = `
+    <div style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);">
+      <strong>Tahap:</strong> Data Preparation (otomatis setelah upload)<br/>
+      <strong>Ukuran data bersih:</strong> ${data.clean_shape[0]} baris × ${data.clean_shape[1]} kolom
+    </div>
+  `;
+
+  processStepsEl.innerHTML = "";
+  (data.steps || []).forEach((s) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${s.title}</strong><br/><span style="opacity:.9">${s.detail}</span>`;
+    processStepsEl.appendChild(li);
+  });
+
+  // scroll ke section proses biar user langsung lihat
+  processSection.scrollIntoView({ behavior: "smooth" });
+}
 
 // =======================
-// BASE URL UNTUK BACKEND
+// BASE URL UNTUK BACKEND (HARUS DI ATAS SEBELUM DIPAKAI)
 // =======================
 const BACKEND_BASE_URL = "https://mlp-rf.onrender.com";
 
+const PREPARE_API_URL = `${BACKEND_BASE_URL}/prepare`;
 const MLP_API_URL = `${BACKEND_BASE_URL}/mlp`;
 const RF_API_URL  = `${BACKEND_BASE_URL}/rf`;
+
+// helper: fetch dengan timeout (biar kalau Render lagi bangun, tetap ada feedback)
+async function fetchWithTimeout(url, options = {}, timeoutMs = 60000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+// helper: status kecil di bawah nama file
+function setUploadStatus(msg) {
+  // aman: status nempel di bawah fileNameText
+  const base = fileNameText.dataset.baseName || fileNameText.textContent || "";
+  if (!fileNameText.dataset.baseName) fileNameText.dataset.baseName = base;
+  fileNameText.textContent = `${fileNameText.dataset.baseName}\n${msg}`;
+  fileNameText.style.whiteSpace = "pre-line";
+}
+
 
 async function callMlpApi(file) {
   const formData = new FormData();
