@@ -49,6 +49,105 @@ def fig_to_base64():
     plt.close()
     return "data:image/png;base64," + img_b64
 
+
+# ================================================================
+#  TEMPLATE NARASI OTOMATIS (AGAR LAPORAN SELALU JELAS UNTUK DATASET APAPUN)
+# ================================================================
+def _fit_level(gap_ratio: float) -> str:
+    if gap_ratio < 0.2:
+        return "baik (generalisasi stabil)"
+    if gap_ratio < 0.5:
+        return "cukup (ada potensi over/underfitting)"
+    return "buruk (indikasi overfitting/ketidakseimbangan tinggi)"
+
+
+def build_report_narrative(
+    algo_name: str,
+    target_name: str,
+    feature_names: list,
+    train_samples: int,
+    test_samples: int,
+    mse_train: float,
+    mse_test: float,
+    rmse_test: float,
+    gap_ratio: float,
+    top_feature: str | None = None,
+):
+    """
+    Narasi ini sengaja GENERIC, jadi bisa dipakai untuk dataset apa pun.
+    Catatan penting:
+    - Ini REGRESI: memprediksi nilai numerik target dari fitur numerik lain.
+    - Ini BUKAN forecasting time-series kecuali split berdasarkan waktu.
+    """
+    feat_count = len(feature_names) if feature_names else 0
+    fit_quality = _fit_level(gap_ratio)
+
+    # Penjelasan arti RMSE dalam “satuan target”
+    rmse_explain = (
+        f"RMSE test {rmse_test:.4f} artinya rata-rata deviasi prediksi terhadap nilai aktual "
+        f"sekitar ±{rmse_test:.4f} dalam satuan '{target_name}'."
+    )
+
+    # Tujuan program (jelas & universal)
+    objective = (
+        "Aplikasi ini melakukan pemodelan regresi untuk memprediksi variabel target numerik "
+        "menggunakan fitur numerik lain, lalu membandingkan performa dua algoritma (MLP vs Random Forest) "
+        "berdasarkan MSE/RMSE pada data uji dan stabilitas generalisasi (gap train-test)."
+    )
+
+    what_predicted = (
+        f"Target yang diprediksi: '{target_name}'. "
+        f"Jumlah fitur numerik yang digunakan: {feat_count}."
+    )
+
+    # Interpretasi kualitas generalisasi
+    generalization = (
+        f"Perbandingan train-test: MSE train={mse_train:.4f} vs MSE test={mse_test:.4f} "
+        f"(gap {gap_ratio*100:.1f}%) → kualitas generalisasi: {fit_quality}."
+    )
+
+    # Rekomendasi keputusan (akurat vs stabil)
+    decision = (
+        "Jika tujuan utama adalah akurasi pada data uji (error sekecil mungkin), fokus ke model dengan RMSE/MSE test terendah. "
+        "Jika tujuan utama adalah model yang stabil untuk data baru, fokus ke model dengan gap train-test lebih kecil."
+    )
+
+    # Saran perbaikan kalau gap besar
+    tuning = []
+    if gap_ratio >= 0.5:
+        if algo_name.upper() == "RF":
+            tuning.append("Random Forest terindikasi overfitting → coba batasi kompleksitas (mis. set max_depth, min_samples_leaf, min_samples_split) atau kurangi fitur yang tidak relevan.")
+        if algo_name.upper() == "MLP":
+            tuning.append("MLP terindikasi tidak stabil → coba naikkan max_iter, aktifkan early_stopping, atur alpha (regularisasi), dan tuning hidden layer/learning rate.")
+    else:
+        tuning.append("Model relatif stabil. Tuning tetap bisa dilakukan untuk menekan error test lebih jauh.")
+
+    if top_feature:
+        insight = f"Insight interpretasi (RF): fitur paling berpengaruh adalah '{top_feature}'."
+    else:
+        insight = "Insight interpretasi: MLP tidak punya feature importance langsung; interpretasi biasanya lewat analisis sensitivitas/SHAP (opsional)."
+
+    # Kesimpulan otomatis untuk 1 model
+    conclusion_text = (
+        f"Model {algo_name} dilatih dengan {train_samples} data train dan {test_samples} data test. "
+        f"{rmse_explain}\n"
+        f"{generalization}\n"
+        f"{insight}\n"
+        f"Rekomendasi: {decision}\n"
+        f"Catatan tuning: " + (" ".join(tuning))
+    )
+
+    return {
+        "objective": objective,
+        "what_predicted": what_predicted,
+        "rmse_explain": rmse_explain,
+        "generalization": generalization,
+        "decision_guidance": decision,
+        "insight": insight,
+        "tuning_note": " ".join(tuning),
+        "conclusion_text": conclusion_text,
+    }
+
 # ================================================================
 #  ENDPOINT DATA PREPARATION
 # ================================================================
@@ -315,16 +414,27 @@ async def run_mlp(file: UploadFile = File(...)):
                 "y_pred": float(row["__y_pred__"]),
             })
 
-        summary = (
-            f"Model MLP dengan hidden layer {model.hidden_layer_sizes}, max_iter={model.max_iter}, "
-            f"menggunakan {len(X_train)} data train dan {len(X_test)} data test "
+                summary = (
+            f"Model MLP (hidden layers={model.hidden_layer_sizes}, max_iter={model.max_iter}) "
+            f"dilatih menggunakan {len(X_train)} data train dan {len(X_test)} data test "
             f"dari maksimum {MAX_ROWS} baris pertama dataset."
         )
 
-        conclusion = (
-            f"MSE train = {mse_train:.4f}, MSE test = {mse_test:.4f} "
-            f"(selisih {gap_ratio*100:.1f}%). {fit_comment}"
+        report = build_report_narrative(
+            algo_name="MLP",
+            target_name=str(target_name),
+            feature_names=feature_names,
+            train_samples=int(len(X_train)),
+            test_samples=int(len(X_test)),
+            mse_train=float(mse_train),
+            mse_test=float(mse_test),
+            rmse_test=float(rmse_test),
+            gap_ratio=float(gap_ratio),
+            top_feature=None,
         )
+
+        # tetap kirim conclusion (tapi sekarang versi template yang jelas)
+        conclusion = report["conclusion_text"]
 
         return {
             "steps": steps,
@@ -348,10 +458,10 @@ async def run_mlp(file: UploadFile = File(...)):
                 "test_points": test_points,
                 "max_points": max_points,
             },
-            "summary": summary,
+                        "summary": summary,
             "conclusion": conclusion,
+            "report": report,
         }
-
     except Exception as e:
         print("ERROR MLP:", e)
         return JSONResponse(
@@ -500,16 +610,27 @@ async def run_rf(file: UploadFile = File(...)):
                 "y_pred": float(row["__y_pred__"]),
             })
 
-        summary = (
-            f"Random Forest dengan {model.n_estimators} trees dilatih "
+                summary = (
+            f"Random Forest (n_estimators={model.n_estimators}) dilatih "
             f"menggunakan {len(X_train)} data train dan {len(X_test)} data test "
             f"dari maksimum {MAX_ROWS} baris pertama dataset."
         )
 
-        conclusion = (
-            f"MSE train {mse_train:.4f}, MSE test {mse_test:.4f} (selisih {gap_ratio*100:.1f}%). "
-            f"{fit_comment} Fitur paling berpengaruh: '{important_feature_name}'."
+        report = build_report_narrative(
+            algo_name="RF",
+            target_name=str(target_name),
+            feature_names=feature_names_full,
+            train_samples=int(len(X_train)),
+            test_samples=int(len(X_test)),
+            mse_train=float(mse_train),
+            mse_test=float(mse_test),
+            rmse_test=float(rmse_test),
+            gap_ratio=float(gap_ratio),
+            top_feature=str(important_feature_name),
         )
+
+        conclusion = report["conclusion_text"]
+
 
         return {
             "steps": steps,
@@ -534,8 +655,9 @@ async def run_rf(file: UploadFile = File(...)):
                 "test_points": test_points,
                 "max_points": max_points,
             },
-            "summary": summary,
+                        "summary": summary,
             "conclusion": conclusion,
+            "report": report,
         }
 
     except Exception as e:
