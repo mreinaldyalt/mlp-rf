@@ -164,9 +164,11 @@ function renderCsvPreview(csvText) {
   const delimiter = detectDelimiter(rows[0]);
   const maxRows = 50;
 
-  previewTable.innerHTML = "";
+  previewTable.innerHTML = "<tbody></tbody>";
+const tbody = previewTable.querySelector("tbody");
 
-  rows.slice(0, maxRows).forEach((row, rowIndex) => {
+rows.slice(0, maxRows).forEach((row, rowIndex) => {
+
     if (!row.trim()) return;
 
     const tr = document.createElement("tr");
@@ -178,7 +180,7 @@ function renderCsvPreview(csvText) {
       tr.appendChild(cell);
     });
 
-    previewTable.appendChild(tr);
+    tbody.appendChild(tr);
   });
 
   previewSection.classList.remove("hidden");
