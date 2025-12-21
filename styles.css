@@ -231,36 +231,59 @@ body {
 /* MINI SPREADSHEET */
 .table-wrapper {
   width: 100%;
-  max-height: 320px;        /* dibatasi tinggi */
-  overflow-y: auto;         /* ada scroll vertikal */
-  overflow-x: auto;
+  max-height: 420px;              /* lebih lega */
+  overflow: auto;                 /* scroll x & y */
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-soft);
+
+  background: var(--bg-table);
+  backdrop-filter: blur(14px);
+
+  /* biar tabel kelihatan “card” */
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.08);
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;       /* font kecil seperti mini spreadsheet */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.88rem;          /* lebih kebaca */
+  color: var(--text-main);
 }
 
+/* sel */
 th,
 td {
-  padding: 6px 10px;        /* padding kecil */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
   white-space: nowrap;
 }
 
+/* HEADER: sticky biar kolom kebaca saat scroll */
 th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
   text-align: left;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.04);
+  font-weight: 700;
+
+  /* header ikut theme */
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-main);
 }
 
-tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.02);
+/* zebra row yang jelas */
+tbody tr:nth-child(odd) td {
+  background: rgba(0, 0, 0, 0.02);
+}
+tbody tr:nth-child(even) td {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* hover biar gampang baca per baris */
+tbody tr:hover td {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* Section algoritma */
