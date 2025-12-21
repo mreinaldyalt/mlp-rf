@@ -467,4 +467,11 @@ tbody tr:hover td {
   border-radius: 10px;
   margin-bottom: 12px;
 }
+body.dark th {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body.light th {
+  background: rgba(0, 0, 0, 0.06);
+}
 
