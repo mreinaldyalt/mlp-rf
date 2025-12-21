@@ -958,3 +958,30 @@ modalOverlay.addEventListener("click", (e) => {
   if (e.target === modalOverlay) hideModal();
 });
 
+/* ======================
+   THEME TOGGLE
+====================== */
+
+const themeToggle = document.getElementById("themeToggle");
+const body = document.body;
+
+// set default
+const savedTheme = localStorage.getItem("theme") || "dark";
+body.classList.add(savedTheme);
+updateThemeButton(savedTheme);
+
+themeToggle?.addEventListener("click", () => {
+  const isDark = body.classList.contains("dark");
+  body.classList.remove(isDark ? "dark" : "light");
+  body.classList.add(isDark ? "light" : "dark");
+
+  const newTheme = isDark ? "light" : "dark";
+  localStorage.setItem("theme", newTheme);
+  updateThemeButton(newTheme);
+});
+
+function updateThemeButton(theme) {
+  if (!themeToggle) return;
+  themeToggle.textContent = theme === "dark" ? "🌙 Dark" : "☀️ Light";
+}
+
